@@ -1,8 +1,7 @@
 'use strict';
 
 var Promise = require('promise');
-var https = require('https');
-
+var request = require('request');
 
 var _delayed = [];
 var _token;
@@ -67,7 +66,6 @@ module.exports.callMethod = function (method, params) {
     return new Promise(function (resolve, reject) {
 
         apiRequest(method, params, function (data) {
-
             if (data.response) {
                 resolve(data.response);
             } else {
@@ -154,44 +152,29 @@ module.exports.execute = function (captcha) {
 
 
 function apiRequest (method, params, callback) {
-
-    https.request({
-        hostname: 'api.vk.com',
-        port: 443,
-        path: '/method/' + method,
-        method: 'POST'
-    }, function (res) {
-        var json = '';
-        res.on('data', function (chunk) {
-            json += chunk;
-        })
-        .on('end', function () {
-            callback(JSON.parse(json || '{}'));
-        });
-    })
-    .on('error', function () {
-        // TODO
-    })
-    .end(makeQueryString(params));
+  request({
+    baseUrl: 'https://api.vk.com',
+    uri: '/method/' + method,
+    body: makeQueryString(params),
+    method: 'POST',
+    timeout: 10000
+  }, function(error, response, body) {
+    if (error) {
+      callback({error: error});
+    } else {
+      callback(JSON.parse(body));
+    }
+  });
 
 }
 
 
 function getRequest (url, callback) {
-
-    https.get(url, function (res) {
-        var data = '';
-        res.on('data', function (chunk) {
-            data += chunk;
-        })
-        .on('end', function () {
-            callback(data);
-        });
-    })
-    .on('error', function () {
-        // TODO
+    request(url, function(error, response, body) {
+      if (!error) {
+        callback(data);
+      }
     });
-
 }
 
 
@@ -205,4 +188,3 @@ function makeQueryString (params) {
         .concat(_token ? 'access_token=' + _token : '')
         .join('&');
 }
-
